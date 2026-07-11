@@ -2,149 +2,101 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Hub</title>
+    <title>🤖 AI Hub</title>
     <style>
-        :root {
-            --bg-dark: #0f172a;
-            --glass-bg: rgba(30, 41, 59, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-        }
-
         body {
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            color: var(--text-main);
-            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
         }
 
-        .container {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 40px;
+        .main-card {
+            background: #111111;
+            border: 1px solid #222;
+            padding: 2rem;
             width: 100%;
-            max-width: 600px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            border-radius: 20px;
         }
 
-        h1 { margin-top: 0; font-size: 1.8rem; letter-spacing: -0.025em; text-align: center; }
+        h2 { text-align: center; font-weight: 300; margin-bottom: 2rem; color: #888; }
 
         textarea {
             width: 100%;
-            height: 120px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            color: white;
-            padding: 16px;
+            background: #000;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            height: 100px;
+            margin-bottom: 10px;
             box-sizing: border-box;
-            font-size: 14px;
-            resize: none;
-            margin-bottom: 16px;
         }
 
-        .actions { display: flex; gap: 10px; margin-bottom: 24px; }
-
-        button {
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            transition: transform 0.2s, background 0.2s;
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-group button { 
+            flex: 1; padding: 10px; cursor: pointer; background: #222; border: none; 
+            color: #ccc; border-radius: 6px; font-size: 0.8rem; 
         }
-
-        button:hover { transform: scale(1.02); }
-
-        .btn-copy { background: #3b82f6; color: white; }
-        .btn-clear { background: #475569; color: white; }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            color: white;
-            box-sizing: border-box;
-            margin-bottom: 24px;
-        }
+        .btn-group button:hover { background: #333; }
 
         .ai-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
 
-        .ai-btn {
-            padding: 12px;
-            text-align: center;
-            border-radius: 12px;
-            color: white;
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: filter 0.2s;
+        .ai-link {
+            display: flex; align-items: center; gap: 10px;
+            background: #1a1a1a; padding: 12px; border-radius: 8px;
+            text-decoration: none; color: white; font-weight: 500;
+            border: 1px solid #222;
         }
+        .ai-link:hover { border-color: #555; background: #222; }
 
-        .ai-btn:hover { filter: brightness(1.2); }
-
-        /* Button Colors */
-        .c-chatgpt { background: #10a37f; }
-        .c-claude { background: #d97706; }
-        .c-gemini { background: #3b82f6; }
-        .c-mistral { background: #f59e0b; }
-        .c-perplexity { background: #64748b; }
-        .c-grok { background: #000000; border: 1px solid #333; }
-        .c-deepseek { background: #4f46e5; }
+        .icon { width: 20px; height: 20px; background: #444; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 
         .disclaimer {
-            margin-top: 30px;
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            text-align: center;
-            border-top: 1px solid var(--glass-border);
-            padding-top: 15px;
+            margin-top: 30px; font-size: 0.7rem; color: #444; text-align: center;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>AI Hub</h1>
-    
-    <textarea placeholder="Draft your prompt here..."></textarea>
-    
-    <div class="actions">
-        <button class="btn-copy">Copy to Clipboard</button>
-        <button class="btn-clear">Clear</button>
+<div class="main-card">
+    <h2>AI Hub</h2>
+    <textarea id="prompt" placeholder="Type prompt here..."></textarea>
+    <div class="btn-group">
+        <button onclick="copy()">Copy</button>
+        <button onclick="document.getElementById('prompt').value=''">Clear</button>
     </div>
 
-    <input type="text" placeholder="Quick Search (Google)...">
-
     <div class="ai-grid">
-        <a href="#" class="ai-btn c-chatgpt">ChatGPT</a>
-        <a href="#" class="ai-btn c-claude">Claude</a>
-        <a href="#" class="ai-btn c-gemini">Gemini</a>
-        <a href="#" class="ai-btn c-mistral">Mistral</a>
-        <a href="#" class="ai-btn c-perplexity">Perplexity</a>
-        <a href="#" class="ai-btn c-grok">Grok</a>
-        <a href="#" class="ai-btn c-deepseek">DeepSeek</a>
+        <a href="https://chatgpt.com" class="ai-link"><div class="icon">C</div> ChatGPT</a>
+        <a href="https://claude.ai" class="ai-link"><div class="icon">C</div> Claude</a>
+        <a href="https://gemini.google.com" class="ai-link"><div class="icon">G</div> Gemini</a>
+        <a href="https://chat.mistral.ai" class="ai-link"><div class="icon">M</div> Mistral</a>
+        <a href="https://www.perplexity.ai" class="ai-link"><div class="icon">P</div> Perplexity</a>
+        <a href="https://x.ai" class="ai-link"><div class="icon">G</div> Grok</a>
+        <a href="https://chat.deepseek.com" class="ai-link"><div class="icon">D</div> DeepSeek</a>
     </div>
 
     <div class="disclaimer">
-        ⚠️ This is a personal project. Use as-is; no bug fixes or support provided.
+        Personal project. No support or bug fixes provided.
     </div>
 </div>
+
+<script>
+    function copy() {
+        const t = document.getElementById("prompt");
+        t.select(); document.execCommand("copy");
+    }
+</script>
 
 </body>
 </html>
