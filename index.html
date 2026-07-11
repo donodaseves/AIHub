@@ -188,6 +188,20 @@
     justify-content: space-between;
   }
 
+  .draft-hint {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--text-faint);
+  }
+
+  .draft-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 6px;
+  }
+
   textarea#draft {
     width: 100%;
     min-height: 140px;
@@ -235,8 +249,8 @@
     height: 1px;
     background: var(--border);
   }
-  .prompt-divider.divider-end { margin: 4px 0 18px; }
-  .prompt-divider.divider-start { margin: 0 0 4px; }
+  .prompt-divider.divider-start { margin: 0 0 6px; }
+  .prompt-divider.divider-end { margin: 16px 0 6px; }
 
   .btn {
     background: var(--surface-alt);
@@ -313,11 +327,13 @@
   <section class="utility-panel">
     <div class="panel-col">
       <div class="card">
-        <h2>Draft</h2>
+        <h2>Draft <span class="draft-hint">press / to focus</span></h2>
         <textarea id="draft" placeholder="Write or paste a prompt here..."></textarea>
+        <div class="draft-meta" id="draft-meta">0 words · 0 characters</div>
         <div class="row" id="prompt-lib"></div>
         <div class="row">
           <button class="btn primary" id="copy-draft">Copy</button>
+          <button class="btn" id="save-draft">Save .txt</button>
           <button class="btn danger-outline" id="clear-draft">Clear</button>
         </div>
       </div>
@@ -431,11 +447,30 @@
     }
   });
 
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "/") return;
+    var active = document.activeElement;
+    var typing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    if (typing) return;
+    e.preventDefault();
+    draft.focus();
+  });
+
   /* ============ DRAFT / PROMPT LIBRARY ============ */
   var draft = document.getElementById("draft");
+  var draftMeta = document.getElementById("draft-meta");
   draft.value = localStorage.getItem("acd-draft") || "";
+
+  function updateMeta() {
+    var text = draft.value;
+    var words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    draftMeta.textContent = words + " words · " + text.length + " characters";
+  }
+  updateMeta();
+
   draft.addEventListener("input", function () {
     localStorage.setItem("acd-draft", draft.value);
+    updateMeta();
   });
 
   var lib = document.getElementById("prompt-lib");
@@ -447,19 +482,20 @@
     chip.addEventListener("click", function () {
       draft.value += (draft.value && !draft.value.endsWith("\n") ? "\n" : "") + p.text;
       localStorage.setItem("acd-draft", draft.value);
+      updateMeta();
       draft.focus();
     });
     lib.appendChild(chip);
   }
-  PROMPTS_CONTENT.forEach(addChip);
   function addDivider(text, extraClass) {
     var divider = document.createElement("span");
     divider.className = "prompt-divider" + (extraClass ? " " + extraClass : "");
     divider.textContent = text;
     lib.appendChild(divider);
   }
-  addDivider("end of prompt", "divider-end");
   addDivider("start of prompt", "divider-start");
+  PROMPTS_CONTENT.forEach(addChip);
+  addDivider("end of prompt", "divider-end");
   PROMPTS_STYLE.forEach(addChip);
 
   document.getElementById("copy-draft").addEventListener("click", function () {
@@ -471,9 +507,24 @@
     });
   });
 
+  document.getElementById("save-draft").addEventListener("click", function () {
+    if (!draft.value.trim()) return;
+    var blob = new Blob([draft.value], { type: "text/plain" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = "draft-" + stamp + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
   document.getElementById("clear-draft").addEventListener("click", function () {
     draft.value = "";
     localStorage.removeItem("acd-draft");
+    updateMeta();
     draft.focus();
   });
 
