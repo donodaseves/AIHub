@@ -1,85 +1,492 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <title>🤖 AI Hub</title>
-    <style>
-        :root { --bg: #000; --card: #111; --text: #eee; }
-        @media (prefers-color-scheme: light) { :root { --bg: #f4f4f4; --card: #fff; --text: #333; } }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; transition: 0.3s; }
-        .main-card { background: var(--card); padding: 2rem; width: 100%; max-width: 500px; border-radius: 20px; border: 1px solid #333; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        h2 { font-weight: 300; color: #888; margin: 0; }
-        
-        #news-ticker { font-size: 0.75rem; color: #0a84ff; margin-bottom: 15px; font-style: italic; }
-        .hidden { display: none; }
-        textarea, input { width: 100%; background: #222; border: 1px solid #444; color: var(--text); padding: 12px; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px; }
-        
-        .btn-group { display: flex; gap: 5px; margin-bottom: 15px; }
-        button { flex: 1; padding: 8px; cursor: pointer; background: #333; border: none; color: #ccc; border-radius: 5px; font-size: 0.75rem; }
-        
-        .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .ai-link { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 8px; text-decoration: none; color: var(--text); border: 1px solid #333; }
-        .icon { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; }
-        
-        .meta { margin-top: 20px; font-size: 0.7rem; color: #666; text-align: center; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Donodaseves AI Hub</title>
+<style>
+  :root {
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 10px;
+    --dur: 160ms;
+  }
+
+  html[data-theme="dark"] {
+    --bg: #0F1215;
+    --surface: #171B1F;
+    --surface-alt: #1E2328;
+    --border: #2A2F35;
+    --border-soft: #232830;
+    --text: #E6E8EA;
+    --text-muted: #8B929A;
+    --text-faint: #565D65;
+    --focus: #5B8DEF;
+    --danger: #E5533D;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  html[data-theme="light"] {
+    --bg: #F3F4F6;
+    --surface: #FFFFFF;
+    --surface-alt: #F8F9FA;
+    --border: #DDE1E4;
+    --border-soft: #E7E9EB;
+    --text: #1A1D20;
+    --text-muted: #63696F;
+    --text-faint: #9BA1A7;
+    --focus: #3B6FD9;
+    --danger: #C13F2B;
+    --shadow: 0 8px 24px rgba(20,20,30,0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    transition: background var(--dur) ease, color var(--dur) ease;
+    padding-bottom: 60px;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 20px 0;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 28px;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color var(--dur), color var(--dur), background var(--dur);
+  }
+  .icon-btn:hover { border-color: var(--focus); color: var(--text); }
+  .icon-btn[aria-pressed="true"] { background: var(--focus); color: #fff; border-color: var(--focus); }
+
+  /* ---------- AI Grid ---------- */
+  section.deck { margin-bottom: 32px; }
+
+  .ai-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .ai-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent, var(--focus));
+    border-radius: var(--radius);
+    padding: 16px 16px 14px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform var(--dur) ease, box-shadow var(--dur) ease, border-color var(--dur) ease;
+  }
+  .ai-card.gradient-accent {
+    border-left: 4px solid transparent;
+    overflow: hidden;
+  }
+  .ai-card.gradient-accent::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--accent-gradient);
+  }
+  .ai-card:hover, .ai-card:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px -6px var(--accent, var(--focus));
+  }
+  .ai-card:active { transform: translateY(0); }
+
+  .ai-card .name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .ai-card .desc {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .ai-card .keycap {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 5px;
+    background: var(--surface-alt);
+  }
+
+  /* ---------- Utility panel ---------- */
+  .utility-panel {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .utility-panel { grid-template-columns: 1fr; }
+  }
+
+  .panel-col { display: flex; flex-direction: column; gap: 16px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  textarea#draft {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13.5px;
+    padding: 10px 12px;
+    line-height: 1.5;
+  }
+
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+  .chip {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color var(--dur), color var(--dur);
+  }
+  .chip:hover { border-color: var(--focus); color: var(--text); }
+
+  .btn {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color var(--dur), background var(--dur);
+  }
+  .btn:hover { border-color: var(--focus); }
+  .btn.primary { background: var(--focus); color: #fff; border-color: var(--focus); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger-outline { color: var(--danger); border-color: var(--danger); background: transparent; }
+  .btn.danger-outline:hover { background: var(--danger); color: #fff; }
+
+  .search-row { display: flex; gap: 8px; }
+  input[type="text"]#wiki-input {
+    flex: 1;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13.5px;
+    padding: 9px 12px;
+  }
+
+  .wiki-status {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    min-height: 16px;
+  }
+
+  /* ---------- Focus mode ---------- */
+  body.focus-mode .utility-panel {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  footer {
+    max-width: 980px;
+    margin: 30px auto 0;
+    padding: 0 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    text-align: center;
+  }
+</style>
 </head>
 <body>
 
-<div class="main-card">
-    <div class="header">
-        <h2>AI Hub</h2>
-        <button onclick="document.getElementById('extra').classList.toggle('hidden')">Menu</button>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Donodaseves AI Hub</h1>
     </div>
-    <div id="news-ticker">Loading today's AI pulse...</div>
+    <div class="header-controls">
+      <button class="icon-btn" id="focus-toggle" aria-pressed="false" title="Toggle Focus Mode">◧ Focus</button>
+      <button class="icon-btn" id="theme-toggle" title="Toggle theme">☾ Theme</button>
+    </div>
+  </header>
 
-    <div id="extra">
-        <textarea id="goal" placeholder="Today's Goal..." oninput="localStorage.setItem('goal', this.value)"></textarea>
-        <textarea id="prompt" placeholder="Draft prompt..."></textarea>
-        <div class="btn-group">
-            <button onclick="copy()">Copy Draft</button>
-            <button onclick="add('Analyze this code:')">[Code]</button>
-            <button onclick="add('Summarize this:')">[Sum]</button>
+  <section class="deck">
+    <div class="ai-grid" id="ai-grid"></div>
+  </section>
+
+  <section class="utility-panel">
+    <div class="panel-col">
+      <div class="card">
+        <h2>Draft</h2>
+        <textarea id="draft" placeholder="Write or paste a prompt here..."></textarea>
+        <div class="row" id="prompt-lib"></div>
+        <div class="row">
+          <button class="btn primary" id="copy-draft">Copy</button>
+          <button class="btn danger-outline" id="clear-draft">Clear</button>
         </div>
-        <input type="text" placeholder="Wikipedia Search..." onkeydown="if(event.key==='Enter') window.open('https://en.wikipedia.org/wiki/'+this.value)">
+      </div>
     </div>
 
-    <div class="ai-grid">
-        <a href="https://chatgpt.com" class="ai-link" style="border-left: 4px solid #10a37f"><div class="icon" style="background:#10a37f">1</div> ChatGPT</a>
-        <a href="https://claude.ai" class="ai-link" style="border-left: 4px solid #d97706"><div class="icon" style="background:#d97706">2</div> Claude</a>
-        <a href="https://gemini.google.com" class="ai-link" style="border-left: 4px solid #3b82f6"><div class="icon" style="background:#3b82f6">3</div> Gemini</a>
-        <a href="https://chat.mistral.ai" class="ai-link" style="border-left: 4px solid #f59e0b"><div class="icon" style="background:#f59e0b">4</div> Mistral</a>
-        <a href="https://www.perplexity.ai" class="ai-link" style="border-left: 4px solid #64748b"><div class="icon" style="background:#64748b">5</div> Perplexity</a>
-        <a href="https://x.ai" class="ai-link" style="border-left: 4px solid #333"><div class="icon" style="background:#333">6</div> Grok</a>
-        <a href="https://chat.deepseek.com" class="ai-link" style="border-left: 4px solid #4f46e5"><div class="icon" style="background:#4f46e5">7</div> DeepSeek</a>
+    <div class="panel-col">
+      <div class="card">
+        <h2>Wikipedia</h2>
+        <div class="search-row">
+          <input type="text" id="wiki-input" placeholder="Search Wikipedia...">
+          <button class="btn primary" id="wiki-btn">Search</button>
+        </div>
+        <div class="wiki-status" id="wiki-status"></div>
+      </div>
     </div>
-
-    <div class="meta">
-        <p id="clock"></p>
-        Shortcuts: Alt + 1-7 | No support provided.
-    </div>
+  </section>
 </div>
 
+<footer>Personal project. No support or bug fixes provided.</footer>
+
 <script>
-    document.getElementById('goal').value = localStorage.getItem('goal') || "";
-    document.getElementById('clock').innerText = new Date().toLocaleDateString();
-    
-    // News Fetch
-    fetch('https://api.rss2json.com/v1/api.json?rss_url=https://news.ycombinator.com/rss')
-    .then(res => res.json())
-    .then(data => document.getElementById('news-ticker').innerText = "AI Pulse: " + data.items[0].title);
+(function () {
+  "use strict";
 
-    function copy() { const t = document.getElementById("prompt"); t.select(); document.execCommand("copy"); }
-    function add(text) { document.getElementById("prompt").value += text + " "; }
-    window.addEventListener("keydown", e => {
-        if(e.altKey && e.key >= '1' && e.key <= '7') {
-            const urls = ["https://chatgpt.com", "https://claude.ai", "https://gemini.google.com", "https://chat.mistral.ai", "https://www.perplexity.ai", "https://x.ai", "https://chat.deepseek.com"];
-            window.open(urls[e.key - 1], "_blank");
-        }
+  /* ============ DATA ============ */
+  var AIS = [
+    { name: "ChatGPT",    desc: "OpenAI",     url: "https://chat.openai.com/",      accent: "#10A37F" },
+    { name: "Claude",     desc: "Anthropic",  url: "https://claude.ai/new",         accent: "#D97757" },
+    { name: "Gemini",     desc: "Google",     url: "https://gemini.google.com/app", gradient: "linear-gradient(135deg,#4E8CFF,#B06AF6)" },
+    { name: "Mistral",    desc: "Mistral AI", url: "https://chat.mistral.ai/chat",  accent: "#FF7000" },
+    { name: "Perplexity", desc: "Perplexity", url: "https://www.perplexity.ai/",    accent: "#20B8CD" },
+    { name: "Grok",       desc: "xAI",        url: "https://grok.com/",             accent: "#9AA0A6" },
+    { name: "DeepSeek",   desc: "DeepSeek",   url: "https://chat.deepseek.com/",    accent: "#4D6BFE" },
+    { name: "DuckDuckGo", desc: "DuckDuckGo AI Chat", url: "https://duckduckgo.com/aichat", accent: "#DE5833" }
+  ];
+
+  var PROMPTS = [
+    { label: "[Code]",      text: "Write clean, well-commented code for: " },
+    { label: "[Sum]",       text: "Summarize the following text concisely:\n\n" },
+    { label: "[Explain]",   text: "Explain this in simple terms:\n\n" },
+    { label: "[Fix]",       text: "Find and fix the bug in this code:\n\n" },
+    { label: "[Translate]", text: "Translate the following to English:\n\n" },
+    { label: "[Email]",     text: "Write a short, direct professional email about: " }
+  ];
+
+  /* ============ THEME ============ */
+  var root = document.documentElement;
+  function applyTheme(t) {
+    root.setAttribute("data-theme", t);
+    localStorage.setItem("acd-theme", t);
+    var btn = document.getElementById("theme-toggle");
+    btn.textContent = t === "dark" ? "☾ Theme" : "☀ Theme";
+  }
+  var savedTheme = localStorage.getItem("acd-theme");
+  if (!savedTheme) {
+    savedTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  applyTheme(savedTheme);
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+
+  /* ============ FOCUS MODE ============ */
+  var focusBtn = document.getElementById("focus-toggle");
+  function applyFocus(on) {
+    document.body.classList.toggle("focus-mode", on);
+    focusBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    localStorage.setItem("acd-focus", on ? "1" : "0");
+  }
+  applyFocus(localStorage.getItem("acd-focus") === "1");
+  focusBtn.addEventListener("click", function () {
+    applyFocus(!document.body.classList.contains("focus-mode"));
+  });
+
+  /* ============ AI GRID ============ */
+  var grid = document.getElementById("ai-grid");
+  AIS.forEach(function (ai, i) {
+    var card = document.createElement("div");
+    card.className = "ai-card" + (ai.gradient ? " gradient-accent" : "");
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", "Open " + ai.name + " (Alt+" + (i + 1) + ")");
+    if (ai.gradient) {
+      card.style.setProperty("--accent-gradient", ai.gradient);
+      card.style.setProperty("--accent", ai.accent || "#8888ff");
+    } else {
+      card.style.setProperty("--accent", ai.accent);
+    }
+    card.innerHTML =
+      '<span class="keycap">Alt+' + (i + 1) + '</span>' +
+      '<span class="name">' + ai.name + '</span>' +
+      '<span class="desc">' + ai.desc + '</span>';
+    function open() { window.open(ai.url, "_blank", "noopener"); }
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
     });
-</script>
+    grid.appendChild(card);
+  });
 
+  document.addEventListener("keydown", function (e) {
+    if (!e.altKey) return;
+    var n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 8) {
+      e.preventDefault();
+      window.open(AIS[n - 1].url, "_blank", "noopener");
+    }
+  });
+
+  /* ============ DRAFT / PROMPT LIBRARY ============ */
+  var draft = document.getElementById("draft");
+  draft.value = localStorage.getItem("acd-draft") || "";
+  draft.addEventListener("input", function () {
+    localStorage.setItem("acd-draft", draft.value);
+  });
+
+  var lib = document.getElementById("prompt-lib");
+  PROMPTS.forEach(function (p) {
+    var chip = document.createElement("button");
+    chip.className = "chip";
+    chip.type = "button";
+    chip.textContent = p.label;
+    chip.addEventListener("click", function () {
+      draft.value += (draft.value && !draft.value.endsWith("\n") ? "\n" : "") + p.text;
+      localStorage.setItem("acd-draft", draft.value);
+      draft.focus();
+    });
+    lib.appendChild(chip);
+  });
+
+  document.getElementById("copy-draft").addEventListener("click", function () {
+    var btn = this;
+    navigator.clipboard.writeText(draft.value).then(function () {
+      var old = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(function () { btn.textContent = old; }, 1200);
+    });
+  });
+
+  document.getElementById("clear-draft").addEventListener("click", function () {
+    draft.value = "";
+    localStorage.removeItem("acd-draft");
+    draft.focus();
+  });
+
+  /* ============ WIKIPEDIA SEARCH ============ */
+  var wikiInput = document.getElementById("wiki-input");
+  var wikiStatus = document.getElementById("wiki-status");
+
+  function doWikiSearch() {
+    var q = wikiInput.value.trim();
+    if (!q) return;
+    wikiStatus.textContent = "Searching...";
+    var api = "https://en.wikipedia.org/w/api.php?action=opensearch&search=" +
+      encodeURIComponent(q) + "&limit=1&namespace=0&format=json&origin=*";
+    fetch(api)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var titles = data[1], links = data[3];
+        if (links && links.length) {
+          wikiStatus.textContent = "Opening: " + titles[0];
+          window.open(links[0], "_blank", "noopener");
+        } else {
+          wikiStatus.textContent = "No results for \"" + q + "\".";
+        }
+      })
+      .catch(function () {
+        wikiStatus.textContent = "Search failed — opening Wikipedia search page instead.";
+        window.open("https://en.wikipedia.org/w/index.php?search=" + encodeURIComponent(q), "_blank", "noopener");
+      });
+  }
+
+  document.getElementById("wiki-btn").addEventListener("click", doWikiSearch);
+  wikiInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") doWikiSearch();
+  });
+
+})();
+</script>
 </body>
 </html>
