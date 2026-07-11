@@ -219,6 +219,7 @@
   .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
   .chip {
+    display: inline-block;
     background: var(--surface-alt);
     border: 1px solid var(--border);
     color: var(--text-muted);
@@ -347,6 +348,11 @@
           <button class="btn primary" id="wiki-btn">Search</button>
         </div>
         <div class="wiki-status" id="wiki-status"></div>
+      </div>
+
+      <div class="card">
+        <h2>Redirects</h2>
+        <div class="row" id="redirect-links"></div>
       </div>
     </div>
   </section>
@@ -558,6 +564,23 @@
   document.getElementById("wiki-btn").addEventListener("click", doWikiSearch);
   wikiInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") doWikiSearch();
+  });
+
+  /* ============ REDIRECTS ============ */
+  var REDIRECTS = [
+    { label: "Excalidraw", url: "https://excalidraw.com/" },
+    { label: "Notion", url: "https://www.notion.so/" },
+    { label: "Donodaseves Utilities", url: "https://donodaseves.github.io/utilities/" }
+  ];
+  var redirectLinks = document.getElementById("redirect-links");
+  REDIRECTS.forEach(function (r) {
+    var link = document.createElement("a");
+    link.className = "chip";
+    link.href = r.url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = r.label;
+    redirectLinks.appendChild(link);
   });
 
 })();
