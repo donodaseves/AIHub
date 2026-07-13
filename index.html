@@ -156,15 +156,26 @@
     background: var(--surface-alt);
   }
 
-  /* ---------- Utility panel ---------- */
-  .utility-panel {
+  /* ---------- Draft (full width) ---------- */
+  .draft-card { margin-bottom: 16px; }
+
+  /* ---------- Secondary grid (Time / Scratch / Lookup) ---------- */
+  .secondary-grid {
     display: grid;
-    grid-template-columns: 1.3fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
   }
 
-  @media (max-width: 720px) {
-    .utility-panel { grid-template-columns: 1fr; }
+  @media (max-width: 900px) {
+    .secondary-grid { grid-template-columns: 1fr; }
+  }
+
+  .col-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
   }
 
   .panel-col { display: flex; flex-direction: column; gap: 16px; }
@@ -221,6 +232,16 @@
 
   .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
+  .draft-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .draft-controls .row { margin-top: 0; }
+
   .chip {
     display: inline-block;
     background: var(--surface-alt);
@@ -235,27 +256,20 @@
   }
   .chip:hover { border-color: var(--focus); color: var(--text); }
 
-  .prompt-divider {
-    flex-basis: 100%;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  .prompt-dropdown {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-faint);
+    font-size: 11.5px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    max-width: 100%;
+    transition: border-color var(--dur), color var(--dur);
   }
-  .prompt-divider::before,
-  .prompt-divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-  .prompt-divider.divider-start { margin: 0 0 6px; }
-  .prompt-divider.divider-end { margin: 16px 0 6px; }
-  .prompt-divider.divider-mood { margin: 16px 0 6px; }
+  .prompt-dropdown:hover, .prompt-dropdown:focus { border-color: var(--focus); color: var(--text); }
+  .prompt-dropdown option { background: var(--surface); color: var(--text); }
 
   .btn {
     background: var(--surface-alt);
@@ -314,29 +328,22 @@
   }
 
   /* ---------- Focus mode ---------- */
-  body.focus-mode .utility-panel,
-  body.focus-mode .timer-row {
+  body.focus-mode .draft-card,
+  body.focus-mode .secondary-grid {
     display: none;
   }
 
   /* ---------- Timer / Stopwatch ---------- */
   .timer-row {
     display: flex;
+    flex-direction: column;
     gap: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin: 0 auto 28px;
   }
   .timer-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px 20px;
-    min-width: 190px;
   }
   .timer-label {
     font-family: var(--mono);
@@ -435,6 +442,16 @@
     border-top: 1px solid var(--border-soft);
   }
 
+  .shortcuts-modal-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 14px 16px 4px;
+  }
+  .shortcuts-modal-body { padding: 4px 16px 8px; }
+
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; }
   }
@@ -458,9 +475,12 @@
       <h1>Donodaseves AI Hub</h1>
     </div>
     <div class="header-controls">
+      <a class="icon-btn" id="donate-btn" href="PASTE_YOUR_DONATE_LINK_HERE" target="_blank" rel="noopener" title="Support this project">♥ Donate</a>
+      <button class="icon-btn" id="shortcuts-trigger" title="Keyboard shortcuts">? Shortcuts</button>
       <button class="icon-btn" id="cmdk-trigger" title="Command palette (Ctrl+K)">⌘K Search</button>
       <button class="icon-btn" id="focus-toggle" aria-pressed="false" title="Toggle Focus Mode">◧ Focus</button>
       <button class="icon-btn" id="theme-toggle" title="Toggle theme">☾ Theme</button>
+      <button class="icon-btn" id="reset-storage" title="Clear all saved data (draft, notes, theme...)">⟲ Reset</button>
     </div>
   </header>
 
@@ -468,57 +488,61 @@
     <div class="ai-grid" id="ai-grid"></div>
   </section>
 
-  <div class="timer-row" id="timer-row">
-    <div class="timer-card">
-      <div class="timer-label">Timer</div>
-      <div class="pomodoro-time" id="pomo-time">25:00</div>
-      <div class="timer-set-row">
-        <input type="number" id="pomo-minutes" min="1" max="180" value="25">
-        <button class="btn" id="pomo-set" type="button">Set</button>
+  <div class="card draft-card">
+    <h2>Draft <span class="draft-hint">press / to jump here</span></h2>
+    <textarea id="draft" placeholder="Write or paste a prompt here..."></textarea>
+    <div class="draft-meta" id="draft-meta">0 words · 0 characters</div>
+    <div class="draft-controls">
+      <div class="row" id="prompt-lib">
+        <select class="prompt-dropdown" id="dd-start"></select>
+        <select class="prompt-dropdown" id="dd-end"></select>
+        <select class="prompt-dropdown" id="dd-mood"></select>
       </div>
-      <div class="pomodoro-controls">
-        <button class="btn primary" id="pomo-start" type="button">Start</button>
-        <button class="btn danger-outline" id="pomo-reset" type="button">Reset</button>
-      </div>
-    </div>
-    <div class="timer-card">
-      <div class="timer-label">Stopwatch</div>
-      <div class="pomodoro-time" id="sw-time">00:00</div>
-      <div class="pomodoro-controls">
-        <button class="btn primary" id="sw-start" type="button">Start</button>
-        <button class="btn danger-outline" id="sw-reset" type="button">Reset</button>
+      <div class="row">
+        <button class="btn primary" id="copy-draft">Copy</button>
+        <button class="btn" id="save-draft">Save .txt</button>
+        <button class="btn danger-outline" id="clear-draft">Clear</button>
       </div>
     </div>
   </div>
 
-  <section class="utility-panel">
+  <section class="secondary-grid">
     <div class="panel-col">
-      <div class="card">
-        <h2>Draft <span class="draft-hint">press / to jump here</span></h2>
-        <textarea id="draft" placeholder="Write or paste a prompt here..."></textarea>
-        <div class="draft-meta" id="draft-meta">0 words · 0 characters</div>
-        <div class="row" id="prompt-lib"></div>
-        <div class="row">
-          <button class="btn primary" id="copy-draft">Copy</button>
-          <button class="btn" id="save-draft">Save .txt</button>
-          <button class="btn danger-outline" id="clear-draft">Clear</button>
+      <div class="col-label">Time</div>
+      <div class="timer-row" id="timer-row">
+        <div class="card timer-card">
+          <div class="timer-label">Timer</div>
+          <div class="pomodoro-time" id="pomo-time">25:00</div>
+          <div class="timer-set-row">
+            <input type="number" id="pomo-minutes" min="1" max="180" value="25">
+            <button class="btn" id="pomo-set" type="button">Set</button>
+          </div>
+          <div class="pomodoro-controls">
+            <button class="btn primary" id="pomo-start" type="button">Start</button>
+            <button class="btn danger-outline" id="pomo-reset" type="button">Reset</button>
+          </div>
+        </div>
+        <div class="card timer-card">
+          <div class="timer-label">Stopwatch</div>
+          <div class="pomodoro-time" id="sw-time">00:00</div>
+          <div class="pomodoro-controls">
+            <button class="btn primary" id="sw-start" type="button">Start</button>
+            <button class="btn danger-outline" id="sw-reset" type="button">Reset</button>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="panel-col">
+      <div class="col-label">Scratch</div>
       <div class="card">
-        <h2>Wikipedia</h2>
-        <div class="search-row">
-          <input type="text" id="wiki-input" placeholder="Search Wikipedia...">
-          <button class="btn primary" id="wiki-btn">Search</button>
-        </div>
-        <div class="wiki-status" id="wiki-status"></div>
-      </div>
-
-      <div class="card">
-        <h2>Notes <button class="chip" id="notes-clear" style="font-size:10px;padding:3px 8px;">clear</button></h2>
+        <h2>Notes</h2>
         <textarea id="notes" placeholder="Quick notes..."></textarea>
+        <div class="row">
+          <button class="btn primary" id="notes-copy">Copy</button>
+          <button class="btn" id="notes-save">Save .txt</button>
+          <button class="btn danger-outline" id="notes-clear">Clear</button>
+        </div>
       </div>
 
       <div class="card">
@@ -530,15 +554,22 @@
           <button class="btn danger-outline" id="cleaner-clear">Clear</button>
         </div>
       </div>
+    </div>
+
+    <div class="panel-col">
+      <div class="col-label">Lookup</div>
+      <div class="card">
+        <h2>Wikipedia</h2>
+        <div class="search-row">
+          <input type="text" id="wiki-input" placeholder="Search Wikipedia...">
+          <button class="btn primary" id="wiki-btn">Search</button>
+        </div>
+        <div class="wiki-status" id="wiki-status"></div>
+      </div>
 
       <div class="card">
         <h2>Redirects</h2>
         <div class="row" id="redirect-links"></div>
-      </div>
-
-      <div class="card">
-        <h2>Shortcuts</h2>
-        <div id="shortcuts-body"></div>
       </div>
     </div>
   </section>
@@ -551,6 +582,14 @@
     <input type="text" id="cmdk-input" class="cmdk-input" placeholder="Jump to a model or link..." autocomplete="off" spellcheck="false">
     <div class="cmdk-list" id="cmdk-list"></div>
     <div class="cmdk-hint">↑↓ navigate · Enter open · Esc close</div>
+  </div>
+</div>
+
+<div class="cmdk-overlay" id="shortcuts-overlay">
+  <div class="cmdk-box">
+    <div class="shortcuts-modal-title">Shortcuts</div>
+    <div id="shortcuts-body" class="shortcuts-modal-body"></div>
+    <div class="cmdk-hint">Esc close</div>
   </div>
 </div>
 
@@ -607,18 +646,18 @@
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       var ctx = new Ctx();
-      [0, 0.25].forEach(function (delay) {
+      [0, 0.3, 0.6].forEach(function (delay) {
         var osc = ctx.createOscillator();
         var gain = ctx.createGain();
         osc.type = "sine";
         osc.frequency.value = 880;
         gain.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + delay + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.35);
+        gain.gain.exponentialRampToValueAtTime(0.6, ctx.currentTime + delay + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.4);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.35);
+        osc.stop(ctx.currentTime + delay + 0.4);
       });
     } catch (e) { /* audio not available, fail silently */ }
   }
@@ -771,6 +810,21 @@
     if (n >= 1 && n <= 8) {
       e.preventDefault();
       window.open(AIS[n - 1].url, "_blank", "noopener");
+      return;
+    }
+    var key = e.key.toLowerCase();
+    if (key === "0") {
+      e.preventDefault();
+      applyFocus(!document.body.classList.contains("focus-mode"));
+    } else if (key === "t") {
+      e.preventDefault();
+      applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    } else if (key === "n") {
+      e.preventDefault();
+      document.getElementById("notes").focus();
+    } else if (key === "c") {
+      e.preventDefault();
+      document.getElementById("cleaner").focus();
     }
   });
 
@@ -781,6 +835,15 @@
     if (typing) return;
     e.preventDefault();
     document.getElementById("draft").focus();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "?") return;
+    var active = document.activeElement;
+    var typing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    if (typing) return;
+    e.preventDefault();
+    openShortcuts();
   });
 
   /* ============ DRAFT / PROMPT LIBRARY ============ */
@@ -806,6 +869,30 @@
   notes.addEventListener("input", function () {
     localStorage.setItem("acd-notes", notes.value);
   });
+
+  document.getElementById("notes-copy").addEventListener("click", function () {
+    var btn = this;
+    navigator.clipboard.writeText(notes.value).then(function () {
+      var old = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(function () { btn.textContent = old; }, 1200);
+    });
+  });
+
+  document.getElementById("notes-save").addEventListener("click", function () {
+    if (!notes.value.trim()) return;
+    var blob = new Blob([notes.value], { type: "text/plain" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = "notes-" + stamp + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
   document.getElementById("notes-clear").addEventListener("click", function () {
     notes.value = "";
     localStorage.removeItem("acd-notes");
@@ -845,32 +932,30 @@
     cleaner.focus();
   });
 
-  var lib = document.getElementById("prompt-lib");
-  function addChip(p) {
-    var chip = document.createElement("button");
-    chip.className = "chip";
-    chip.type = "button";
-    chip.textContent = p.label;
-    chip.addEventListener("click", function () {
+  function buildPromptDropdown(selectEl, items, placeholder) {
+    var ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = placeholder;
+    selectEl.appendChild(ph);
+    items.forEach(function (p, idx) {
+      var opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = p.label;
+      selectEl.appendChild(opt);
+    });
+    selectEl.addEventListener("change", function () {
+      if (selectEl.value === "") return;
+      var p = items[parseInt(selectEl.value, 10)];
       draft.value += (draft.value && !draft.value.endsWith("\n") ? "\n" : "") + p.text;
       localStorage.setItem("acd-draft", draft.value);
       updateMeta();
       draft.focus();
+      selectEl.selectedIndex = 0;
     });
-    lib.appendChild(chip);
   }
-  function addDivider(text, extraClass) {
-    var divider = document.createElement("span");
-    divider.className = "prompt-divider" + (extraClass ? " " + extraClass : "");
-    divider.textContent = text;
-    lib.appendChild(divider);
-  }
-  addDivider("start of prompt", "divider-start");
-  PROMPTS_CONTENT.forEach(addChip);
-  addDivider("end of prompt", "divider-end");
-  PROMPTS_STYLE.forEach(addChip);
-  addDivider("mood", "divider-mood");
-  PROMPTS_MOOD.forEach(addChip);
+  buildPromptDropdown(document.getElementById("dd-start"), PROMPTS_CONTENT, "Start of prompt \u25be");
+  buildPromptDropdown(document.getElementById("dd-end"), PROMPTS_STYLE, "End of prompt \u25be");
+  buildPromptDropdown(document.getElementById("dd-mood"), PROMPTS_MOOD, "Mood \u25be");
 
   document.getElementById("copy-draft").addEventListener("click", function () {
     var btn = this;
@@ -939,7 +1024,7 @@
     { label: "Excalidraw", url: "https://excalidraw.com/" },
     { label: "Notion", url: "https://www.notion.so/" },
     { label: "NotebookLM", url: "https://notebooklm.google.com/" },
-    { label: "Translator", url: "https://www.deepl.com/translator" },
+    { label: "Translator", url: "https://translate.google.com/" },
     { label: "Donodaseves Utilities", url: "https://donodaseves.github.io/utilities/" }
   ];
   var redirectLinks = document.getElementById("redirect-links");
@@ -1042,7 +1127,12 @@
   var SHORTCUTS = [
     { key: "Alt+1–8", desc: "Open AI models" },
     { key: "Ctrl/⌘+K", desc: "Command palette" },
-    { key: "/", desc: "Jump to draft" }
+    { key: "/", desc: "Jump to draft" },
+    { key: "Alt+0", desc: "Toggle Focus Mode" },
+    { key: "Alt+T", desc: "Toggle theme" },
+    { key: "Alt+N", desc: "Jump to notes" },
+    { key: "Alt+C", desc: "Jump to Clean Text" },
+    { key: "Shift+/", desc: "Open this shortcuts list" }
   ];
 
   var shortcutsBody = document.getElementById("shortcuts-body");
@@ -1051,6 +1141,25 @@
     row.className = "shortcut-row";
     row.innerHTML = "<span>" + s.desc + "</span><span class=\"shortcut-key\">" + s.key + "</span>";
     shortcutsBody.appendChild(row);
+  });
+
+  var shortcutsOverlay = document.getElementById("shortcuts-overlay");
+  function openShortcuts() { shortcutsOverlay.classList.add("open"); }
+  function closeShortcuts() { shortcutsOverlay.classList.remove("open"); }
+
+  document.getElementById("shortcuts-trigger").addEventListener("click", openShortcuts);
+  shortcutsOverlay.addEventListener("click", function (e) {
+    if (e.target === shortcutsOverlay) closeShortcuts();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && shortcutsOverlay.classList.contains("open")) closeShortcuts();
+  });
+
+  document.getElementById("reset-storage").addEventListener("click", function () {
+    var ok = confirm("This clears all saved data (draft, notes, theme, focus mode) and reloads the page. Continue?");
+    if (!ok) return;
+    localStorage.clear();
+    location.reload();
   });
 
 })();
