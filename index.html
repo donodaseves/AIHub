@@ -303,6 +303,16 @@
   }
   .chip-remove:hover { color: var(--danger); }
 
+  .chip-add {
+    border-style: dashed;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
+    padding: 5px 12px;
+  }
+  .chip-add:hover { border-color: var(--primary); background: var(--surface-alt); color: var(--primary); }
+
   .mini-input, .mini-textarea {
     background: var(--surface-alt);
     border: 1px solid var(--border);
@@ -389,7 +399,7 @@
   .btn:hover { border-color: var(--focus); }
   .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
   .btn.primary:hover { filter: brightness(1.08); }
-  .btn.icon-only { padding: 7px 12px; font-size: 14px; line-height: 1; flex-shrink: 0; }
+  .btn.icon-only { padding: 7px 12px; font-size: 14px; line-height: 1; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
   .btn.danger-outline { color: var(--danger); border-color: var(--danger); background: transparent; }
   .btn.danger-outline:hover { background: var(--danger); color: #fff; }
 
@@ -692,13 +702,13 @@
         <h2>Wikipedia</h2>
         <div class="search-row">
           <input type="text" id="wiki-input" placeholder="Search Wikipedia...">
-          <button class="btn primary icon-only" id="wiki-btn" title="Search" aria-label="Search">🔍</button>
+          <button class="btn primary icon-only" id="wiki-btn" title="Search" aria-label="Search"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
         </div>
         <div class="wiki-status" id="wiki-status"></div>
       </div>
 
       <div class="card">
-        <h2>Redirects <button class="btn icon-only" id="redirect-manager-trigger" type="button" title="Add redirect" aria-label="Add redirect">+</button></h2>
+        <h2>Redirects</h2>
         <div class="row" id="redirect-links"></div>
       </div>
     </div>
@@ -1337,6 +1347,14 @@
     redirectLinks.innerHTML = "";
     REDIRECTS.forEach(function (r) { addRedirectChip(r, false); });
     CUSTOM_REDIRECTS.forEach(function (r, idx) { addRedirectChip(r, true, idx); });
+    var addTrigger = document.createElement("button");
+    addTrigger.className = "chip chip-add";
+    addTrigger.type = "button";
+    addTrigger.title = "Add redirect";
+    addTrigger.setAttribute("aria-label", "Add redirect");
+    addTrigger.textContent = "+";
+    addTrigger.addEventListener("click", openRedirectManager);
+    redirectLinks.appendChild(addTrigger);
   }
   renderRedirects();
 
@@ -1389,7 +1407,6 @@
   function closeRedirectManager() {
     redirectManagerOverlay.classList.remove("open");
   }
-  document.getElementById("redirect-manager-trigger").addEventListener("click", openRedirectManager);
   redirectManagerOverlay.addEventListener("click", function (e) {
     if (e.target === redirectManagerOverlay) closeRedirectManager();
   });
