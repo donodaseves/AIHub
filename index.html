@@ -256,6 +256,7 @@
     width: 100%;
     min-height: 140px;
     resize: vertical;
+    overflow-y: hidden;
     background: var(--surface-alt);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -303,15 +304,15 @@
   }
   .chip-remove:hover { color: var(--danger); }
 
-  .chip-add {
+  .chip-add, .btn.add {
     border-style: dashed;
     color: var(--primary);
     font-weight: 700;
     font-size: 13px;
     line-height: 1;
-    padding: 5px 12px;
   }
-  .chip-add:hover { border-color: var(--primary); background: var(--surface-alt); color: var(--primary); }
+  .chip-add { padding: 5px 12px; }
+  .chip-add:hover, .btn.add:hover { border-color: var(--primary); background: var(--surface-alt); color: var(--primary); }
 
   .mini-input, .mini-textarea {
     background: var(--surface-alt);
@@ -350,6 +351,9 @@
     font-size: 10.5px;
     color: var(--text-faint);
     cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
   }
   .pm-item-remove:hover { color: var(--danger); }
   .pm-empty {
@@ -589,6 +593,30 @@
     * { transition: none !important; }
   }
 
+  .error-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 2000;
+    background: var(--danger);
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+  .error-banner button {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.5);
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
   footer {
     max-width: 980px;
     margin: 30px auto 0;
@@ -602,6 +630,11 @@
 </head>
 <body>
 
+<div id="error-banner" class="error-banner">
+  <span>⚠ Something went wrong. Try refreshing the page — if it keeps happening, open the browser console (F12) for details.</span>
+  <button id="error-banner-close" type="button" aria-label="Dismiss">✕</button>
+</div>
+
 <div class="wrap">
   <header>
     <div class="brand">
@@ -610,15 +643,18 @@
     <div class="header-controls">
       <a class="icon-btn" id="donate-btn" href="PLACEHOLDER" target="_blank" rel="noopener" title="Support this project">♥ Donate</a>
       <button class="icon-btn" id="cmdk-trigger" title="Command palette (Ctrl+K)">⌘K Search</button>
+      <button class="icon-btn" id="focus-toggle" aria-pressed="false" type="button" title="Toggle Focus Mode">◧ Focus</button>
       <div class="more-menu">
         <button class="icon-btn" id="more-trigger" aria-haspopup="true" aria-expanded="false" title="More options">⋯ More</button>
         <div class="more-dropdown" id="more-dropdown">
-          <button class="more-item" id="focus-toggle" aria-pressed="false" type="button">◧ Focus Mode</button>
           <button class="more-item" id="theme-toggle" type="button">☾ Theme</button>
           <button class="more-item" id="shortcuts-trigger" type="button">? Shortcuts</button>
+          <button class="more-item" id="export-data" type="button">⭳ Export data</button>
+          <button class="more-item" id="import-data" type="button">⭱ Import data</button>
           <button class="more-item danger" id="reset-storage" type="button">⟲ Reset data</button>
         </div>
       </div>
+      <input type="file" id="import-file-input" accept="application/json" style="display:none;">
     </div>
   </header>
 
@@ -641,7 +677,7 @@
         <select class="prompt-dropdown" id="dd-end"></select>
         <select class="prompt-dropdown" id="dd-mood"></select>
         <select class="prompt-dropdown" id="dd-custom"></select>
-        <button class="btn icon-only" id="prompt-manager-trigger" type="button" title="My Prompts" aria-label="My Prompts">+</button>
+        <button class="btn icon-only add" id="prompt-manager-trigger" type="button" title="My Prompts" aria-label="My Prompts">+</button>
       </div>
     </div>
   </div>
@@ -775,8 +811,57 @@
 </div>
 
 <script>
+function acdShowErrorBanner() {
+  var banner = document.getElementById("error-banner");
+  if (banner) banner.style.display = "flex";
+}
+window.addEventListener("error", function () { acdShowErrorBanner(); });
+(function () {
+  var closeBtn = document.getElementById("error-banner-close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function () {
+      var banner = document.getElementById("error-banner");
+      if (banner) banner.style.display = "none";
+    });
+  }
+})();
+
 (function () {
   "use strict";
+  try {
+
+  /* ============ SAFE STORAGE HELPERS ============ */
+  function safeGet(key, fallback) {
+    try {
+      var v = localStorage.getItem(key);
+      return v === null ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+  }
+  function safeRemove(key) {
+    try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+  }
+  function safeClear() {
+    try { localStorage.clear(); } catch (e) { /* ignore */ }
+  }
+
+  /* ============ MODAL HELPERS ============ */
+  function openModal(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add("open");
+  }
+  function closeModal(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove("open");
+  }
+
+  /* ============ TEXTAREA AUTO-RESIZE ============ */
+  function autoResize(el) {
+    el.style.height = "auto";
+    el.style.height = (el.scrollHeight + 2) + "px";
+  }
 
   /* ============ DATA ============ */
   var AIS = [
@@ -939,11 +1024,11 @@
   var root = document.documentElement;
   function applyTheme(t) {
     root.setAttribute("data-theme", t);
-    localStorage.setItem("acd-theme", t);
+    safeSet("acd-theme", t);
     var btn = document.getElementById("theme-toggle");
     btn.textContent = t === "dark" ? "☾ Theme" : "☀ Theme";
   }
-  var savedTheme = localStorage.getItem("acd-theme");
+  var savedTheme = safeGet("acd-theme", null);
   if (!savedTheme) {
     savedTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
   }
@@ -957,9 +1042,9 @@
   function applyFocus(on) {
     document.body.classList.toggle("focus-mode", on);
     focusBtn.setAttribute("aria-pressed", on ? "true" : "false");
-    localStorage.setItem("acd-focus", on ? "1" : "0");
+    safeSet("acd-focus", on ? "1" : "0");
   }
-  applyFocus(localStorage.getItem("acd-focus") === "1");
+  applyFocus(safeGet("acd-focus", "0") === "1");
   focusBtn.addEventListener("click", function () {
     applyFocus(!document.body.classList.contains("focus-mode"));
   });
@@ -1030,25 +1115,28 @@
   /* ============ DRAFT / PROMPT LIBRARY ============ */
   var draft = document.getElementById("draft");
   var draftMeta = document.getElementById("draft-meta");
-  draft.value = localStorage.getItem("acd-draft") || "";
+  draft.value = safeGet("acd-draft", "");
 
   function updateMeta() {
     var text = draft.value;
     var words = text.trim() ? text.trim().split(/\s+/).length : 0;
     draftMeta.textContent = words + " words · " + text.length + " characters";
+    autoResize(draft);
   }
   updateMeta();
 
   draft.addEventListener("input", function () {
-    localStorage.setItem("acd-draft", draft.value);
+    safeSet("acd-draft", draft.value);
     updateMeta();
   });
 
   /* ============ NOTES ============ */
   var notes = document.getElementById("notes");
-  notes.value = localStorage.getItem("acd-notes") || "";
+  notes.value = safeGet("acd-notes", "");
+  autoResize(notes);
   notes.addEventListener("input", function () {
-    localStorage.setItem("acd-notes", notes.value);
+    safeSet("acd-notes", notes.value);
+    autoResize(notes);
   });
 
   document.getElementById("notes-copy").addEventListener("click", function () {
@@ -1076,7 +1164,8 @@
 
   document.getElementById("notes-clear").addEventListener("click", function () {
     notes.value = "";
-    localStorage.removeItem("acd-notes");
+    safeRemove("acd-notes");
+    autoResize(notes);
     notes.focus();
   });
 
@@ -1095,16 +1184,23 @@
 
   var cleaner = document.getElementById("cleaner");
 
+  cleaner.addEventListener("input", function () { autoResize(cleaner); });
+
   // Auto-clean on paste and when leaving the field, so the button row can match Notes exactly.
   cleaner.addEventListener("paste", function () {
-    setTimeout(function () { cleaner.value = cleanText(cleaner.value); }, 0);
+    setTimeout(function () {
+      cleaner.value = cleanText(cleaner.value);
+      autoResize(cleaner);
+    }, 0);
   });
   cleaner.addEventListener("blur", function () {
     if (cleaner.value) cleaner.value = cleanText(cleaner.value);
+    autoResize(cleaner);
   });
 
   document.getElementById("cleaner-copy").addEventListener("click", function () {
     cleaner.value = cleanText(cleaner.value);
+    autoResize(cleaner);
     var btn = this;
     navigator.clipboard.writeText(cleaner.value).then(function () {
       var old = btn.textContent;
@@ -1115,6 +1211,7 @@
 
   document.getElementById("cleaner-save").addEventListener("click", function () {
     cleaner.value = cleanText(cleaner.value);
+    autoResize(cleaner);
     if (!cleaner.value.trim()) return;
     var blob = new Blob([cleaner.value], { type: "text/plain" });
     var url = URL.createObjectURL(blob);
@@ -1130,6 +1227,7 @@
 
   document.getElementById("cleaner-clear").addEventListener("click", function () {
     cleaner.value = "";
+    autoResize(cleaner);
     cleaner.focus();
   });
 
@@ -1154,7 +1252,7 @@
       var items = getItems();
       var p = items[parseInt(selectEl.value, 10)];
       draft.value += (draft.value && !draft.value.endsWith("\n") ? "\n" : "") + p.text;
-      localStorage.setItem("acd-draft", draft.value);
+      safeSet("acd-draft", draft.value);
       updateMeta();
       draft.focus();
       selectEl.selectedIndex = 0;
@@ -1167,10 +1265,10 @@
 
   /* ============ CUSTOM PROMPTS (personal library) ============ */
   var CUSTOM_PROMPTS = [];
-  try { CUSTOM_PROMPTS = JSON.parse(localStorage.getItem("acd-custom-prompts") || "[]"); } catch (e) { CUSTOM_PROMPTS = []; }
+  try { CUSTOM_PROMPTS = JSON.parse(safeGet("acd-custom-prompts", "[]")); } catch (e) { CUSTOM_PROMPTS = []; }
 
   function saveCustomPrompts() {
-    localStorage.setItem("acd-custom-prompts", JSON.stringify(CUSTOM_PROMPTS));
+    safeSet("acd-custom-prompts", JSON.stringify(CUSTOM_PROMPTS));
   }
 
   var rebuildCustomDropdown = buildPromptDropdown(
@@ -1179,30 +1277,39 @@
     "My prompts \u25be"
   );
 
-  function renderPromptManagerList() {
-    var list = document.getElementById("pm-list");
+  function renderManagerList(listElId, items, emptyText, onRemove) {
+    var list = document.getElementById(listElId);
     list.innerHTML = "";
-    if (!CUSTOM_PROMPTS.length) {
-      list.innerHTML = '<div class="pm-empty">No custom prompts yet.</div>';
+    if (!items.length) {
+      var empty = document.createElement("div");
+      empty.className = "pm-empty";
+      empty.textContent = emptyText;
+      list.appendChild(empty);
       return;
     }
-    CUSTOM_PROMPTS.forEach(function (p, idx) {
+    items.forEach(function (item, idx) {
       var row = document.createElement("div");
       row.className = "pm-item";
       var label = document.createElement("span");
-      label.textContent = p.label;
-      var remove = document.createElement("span");
+      label.textContent = item.label;
+      var remove = document.createElement("button");
+      remove.type = "button";
       remove.className = "pm-item-remove";
       remove.textContent = "remove";
-      remove.addEventListener("click", function () {
-        CUSTOM_PROMPTS.splice(idx, 1);
-        saveCustomPrompts();
-        renderPromptManagerList();
-        rebuildCustomDropdown();
-      });
+      remove.setAttribute("aria-label", "Remove " + item.label);
+      remove.addEventListener("click", function () { onRemove(idx); });
       row.appendChild(label);
       row.appendChild(remove);
       list.appendChild(row);
+    });
+  }
+
+  function renderPromptManagerList() {
+    renderManagerList("pm-list", CUSTOM_PROMPTS, "No custom prompts yet.", function (idx) {
+      CUSTOM_PROMPTS.splice(idx, 1);
+      saveCustomPrompts();
+      renderPromptManagerList();
+      rebuildCustomDropdown();
     });
   }
 
@@ -1223,11 +1330,11 @@
 
   var promptManagerOverlay = document.getElementById("prompt-manager-overlay");
   function openPromptManager() {
-    promptManagerOverlay.classList.add("open");
+    openModal("prompt-manager-overlay");
     renderPromptManagerList();
   }
   function closePromptManager() {
-    promptManagerOverlay.classList.remove("open");
+    closeModal("prompt-manager-overlay");
   }
   document.getElementById("prompt-manager-trigger").addEventListener("click", openPromptManager);
   promptManagerOverlay.addEventListener("click", function (e) {
@@ -1259,7 +1366,7 @@
 
   document.getElementById("clear-draft").addEventListener("click", function () {
     draft.value = "";
-    localStorage.removeItem("acd-draft");
+    safeRemove("acd-draft");
     updateMeta();
     draft.focus();
   });
@@ -1306,10 +1413,10 @@
   ];
 
   var CUSTOM_REDIRECTS = [];
-  try { CUSTOM_REDIRECTS = JSON.parse(localStorage.getItem("acd-custom-redirects") || "[]"); } catch (e) { CUSTOM_REDIRECTS = []; }
+  try { CUSTOM_REDIRECTS = JSON.parse(safeGet("acd-custom-redirects", "[]")); } catch (e) { CUSTOM_REDIRECTS = []; }
 
   function saveCustomRedirects() {
-    localStorage.setItem("acd-custom-redirects", JSON.stringify(CUSTOM_REDIRECTS));
+    safeSet("acd-custom-redirects", JSON.stringify(CUSTOM_REDIRECTS));
   }
 
   function normalizeUrl(u) {
@@ -1331,12 +1438,19 @@
       remove.className = "chip-remove";
       remove.textContent = "\u2715";
       remove.title = "Remove";
-      remove.addEventListener("click", function (e) {
+      remove.setAttribute("role", "button");
+      remove.setAttribute("tabindex", "0");
+      remove.setAttribute("aria-label", "Remove " + r.label);
+      function doRemove(e) {
         e.preventDefault();
         e.stopPropagation();
         CUSTOM_REDIRECTS.splice(idx, 1);
         saveCustomRedirects();
         renderRedirects();
+      }
+      remove.addEventListener("click", doRemove);
+      remove.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") doRemove(e);
       });
       link.appendChild(remove);
     }
@@ -1359,29 +1473,11 @@
   renderRedirects();
 
   function renderRedirectManagerList() {
-    var list = document.getElementById("rm-list");
-    list.innerHTML = "";
-    if (!CUSTOM_REDIRECTS.length) {
-      list.innerHTML = '<div class="pm-empty">No custom redirects yet.</div>';
-      return;
-    }
-    CUSTOM_REDIRECTS.forEach(function (r, idx) {
-      var row = document.createElement("div");
-      row.className = "pm-item";
-      var label = document.createElement("span");
-      label.textContent = r.label;
-      var remove = document.createElement("span");
-      remove.className = "pm-item-remove";
-      remove.textContent = "remove";
-      remove.addEventListener("click", function () {
-        CUSTOM_REDIRECTS.splice(idx, 1);
-        saveCustomRedirects();
-        renderRedirects();
-        renderRedirectManagerList();
-      });
-      row.appendChild(label);
-      row.appendChild(remove);
-      list.appendChild(row);
+    renderManagerList("rm-list", CUSTOM_REDIRECTS, "No custom redirects yet.", function (idx) {
+      CUSTOM_REDIRECTS.splice(idx, 1);
+      saveCustomRedirects();
+      renderRedirects();
+      renderRedirectManagerList();
     });
   }
 
@@ -1401,11 +1497,11 @@
 
   var redirectManagerOverlay = document.getElementById("redirect-manager-overlay");
   function openRedirectManager() {
-    redirectManagerOverlay.classList.add("open");
+    openModal("redirect-manager-overlay");
     renderRedirectManagerList();
   }
   function closeRedirectManager() {
-    redirectManagerOverlay.classList.remove("open");
+    closeModal("redirect-manager-overlay");
   }
   redirectManagerOverlay.addEventListener("click", function (e) {
     if (e.target === redirectManagerOverlay) closeRedirectManager();
@@ -1436,7 +1532,13 @@
     cmdkFiltered.forEach(function (item, idx) {
       var el = document.createElement("div");
       el.className = "cmdk-item" + (idx === cmdkActive ? " active" : "");
-      el.innerHTML = "<span>" + item.label + "</span><span class=\"cmdk-tag\">" + item.tag + "</span>";
+      var labelSpan = document.createElement("span");
+      labelSpan.textContent = item.label;
+      var tagSpan = document.createElement("span");
+      tagSpan.className = "cmdk-tag";
+      tagSpan.textContent = item.tag;
+      el.appendChild(labelSpan);
+      el.appendChild(tagSpan);
       el.addEventListener("click", function () { openCmdkItem(item); });
       cmdkList.appendChild(el);
     });
@@ -1449,7 +1551,7 @@
 
   function openCmdk() {
     CMDK_ITEMS = buildCmdkItems();
-    cmdkOverlay.classList.add("open");
+    openModal("cmdk-overlay");
     cmdkInput.value = "";
     cmdkFiltered = CMDK_ITEMS.slice();
     cmdkActive = 0;
@@ -1458,7 +1560,7 @@
   }
 
   function closeCmdk() {
-    cmdkOverlay.classList.remove("open");
+    closeModal("cmdk-overlay");
   }
 
   cmdkInput.addEventListener("input", function () {
@@ -1521,18 +1623,74 @@
   });
 
   var shortcutsOverlay = document.getElementById("shortcuts-overlay");
-  function openShortcuts() { shortcutsOverlay.classList.add("open"); }
-  function closeShortcuts() { shortcutsOverlay.classList.remove("open"); }
+  function openShortcuts() { openModal("shortcuts-overlay"); }
+  function closeShortcuts() { closeModal("shortcuts-overlay"); }
 
   document.getElementById("shortcuts-trigger").addEventListener("click", openShortcuts);
   shortcutsOverlay.addEventListener("click", function (e) {
     if (e.target === shortcutsOverlay) closeShortcuts();
   });
 
+  /* ============ EXPORT / IMPORT ============ */
+  var STORAGE_KEYS = [
+    "acd-draft", "acd-notes", "acd-theme", "acd-focus",
+    "acd-custom-prompts", "acd-custom-redirects", "acd-welcomed"
+  ];
+
+  document.getElementById("export-data").addEventListener("click", function () {
+    var data = {};
+    STORAGE_KEYS.forEach(function (k) {
+      var v = safeGet(k, null);
+      if (v !== null) data[k] = v;
+    });
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = "dase-ai-lab-backup-" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  var importFileInput = document.getElementById("import-file-input");
+  document.getElementById("import-data").addEventListener("click", function () {
+    importFileInput.click();
+  });
+  importFileInput.addEventListener("change", function () {
+    var file = importFileInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(reader.result);
+        var imported = 0;
+        Object.keys(data).forEach(function (k) {
+          if (STORAGE_KEYS.indexOf(k) > -1) {
+            safeSet(k, data[k]);
+            imported++;
+          }
+        });
+        if (!imported) {
+          alert("That file doesn't look like a Dase AI Lab backup.");
+          return;
+        }
+        alert("Data imported. The page will reload now.");
+        location.reload();
+      } catch (e) {
+        alert("Could not read that file — make sure it's a backup exported from this app.");
+      }
+    };
+    reader.readAsText(file);
+    importFileInput.value = "";
+  });
+
   document.getElementById("reset-storage").addEventListener("click", function () {
     var ok = confirm("This clears all saved data (draft, notes, theme, focus mode, custom prompts and redirects) and reloads the page. Continue?");
     if (!ok) return;
-    localStorage.clear();
+    safeClear();
     location.reload();
   });
 
@@ -1560,28 +1718,40 @@
 
   /* ============ WELCOME / ONBOARDING ============ */
   var welcomeOverlay = document.getElementById("welcome-overlay");
-  function openWelcome() { welcomeOverlay.classList.add("open"); }
+  function openWelcome() { openModal("welcome-overlay"); }
   function closeWelcome() {
-    welcomeOverlay.classList.remove("open");
-    localStorage.setItem("acd-welcomed", "1");
+    closeModal("welcome-overlay");
+    safeSet("acd-welcomed", "1");
   }
   document.getElementById("welcome-close").addEventListener("click", closeWelcome);
   welcomeOverlay.addEventListener("click", function (e) {
     if (e.target === welcomeOverlay) closeWelcome();
   });
-  if (!localStorage.getItem("acd-welcomed")) {
+  if (!safeGet("acd-welcomed", null)) {
     openWelcome();
   }
 
+  var MODAL_CLOSERS = {
+    "shortcuts-overlay": closeShortcuts,
+    "prompt-manager-overlay": closePromptManager,
+    "redirect-manager-overlay": closeRedirectManager,
+    "welcome-overlay": closeWelcome,
+    "cmdk-overlay": closeCmdk
+  };
+
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
-    if (shortcutsOverlay.classList.contains("open")) closeShortcuts();
-    if (promptManagerOverlay.classList.contains("open")) closePromptManager();
-    if (redirectManagerOverlay.classList.contains("open")) closeRedirectManager();
-    if (welcomeOverlay.classList.contains("open")) closeWelcome();
+    Object.keys(MODAL_CLOSERS).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.classList.contains("open")) MODAL_CLOSERS[id]();
+    });
     if (moreDropdown.classList.contains("open")) closeMore();
   });
 
+  } catch (err) {
+    console.error(err);
+    acdShowErrorBanner();
+  }
 })();
 </script>
 </body>
